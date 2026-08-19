@@ -5,8 +5,11 @@ export function middleware(req: NextRequest) {
   const isLoginPage = req.nextUrl.pathname === "/login";
   const isApi = req.nextUrl.pathname.startsWith("/api/");
 
-  // API 没登录返回 401
-  if (isApi && !token) {
+  // 登录 API 放行
+  const isLoginApi = req.nextUrl.pathname === "/api/login";
+
+  // API 没登录返回 401（登录接口除外）
+  if (isApi && !token && !isLoginApi) {
     return NextResponse.json({ error: "请先登录" }, { status: 401 });
   }
 
