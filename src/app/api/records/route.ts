@@ -100,18 +100,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(record);
       }
 
-      case "sex": {
-        const record = await prisma.sexRecord.create({
-          data: {
-            userId: TEMP_USER_ID,
-            occurred: data.occurred,
-            time: new Date(data.time),
-            satisfaction: data.satisfaction
-          }
-        });
-        return NextResponse.json(record);
-      }
-
       case "dream": {
         const record = await prisma.dreamRecord.upsert({
           where: {

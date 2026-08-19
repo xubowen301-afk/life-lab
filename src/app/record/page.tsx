@@ -14,7 +14,6 @@ const RECORD_TYPES = [
   { key: "event", label: "重要事件", icon: "📌" },
   { key: "dream", label: "做梦", icon: "💭" },
   { key: "physiology", label: "经期", icon: "🩸" },
-  { key: "sex", label: "性生活", icon: "🔒" },
   { key: "weather", label: "天气", icon: "🌤" }
 ] as const;
 
@@ -50,9 +49,7 @@ export default function RecordPage() {
     contentType: "song",
     isImportant: false,
     isPeriod: false,
-    occurred: true,
     hadDream: true,
-    satisfaction: null,
     energy: null,
     focus: null,
     bodyFatigue: null,
@@ -130,7 +127,6 @@ export default function RecordPage() {
         {activeType === "event" && <EventForm form={form} setField={setField} />}
         {activeType === "dream" && <DreamForm form={form} setField={setField} />}
         {activeType === "physiology" && <PhysiologyForm form={form} setField={setField} />}
-        {activeType === "sex" && <SexForm form={form} setField={setField} />}
         {activeType === "weather" && <WeatherForm form={form} setField={setField} />}
 
         {message && (
@@ -709,55 +705,6 @@ function PhysiologyForm({
         label="疼痛程度 (0–10)"
         value={form.painLevel as number | null}
         onChange={(v) => setField("painLevel", v)}
-      />
-    </>
-  );
-}
-
-// ─── 性生活 ──────────────────────────────────────────
-
-function SexForm({
-  form,
-  setField
-}: {
-  form: Record<string, unknown>;
-  setField: (k: string, v: unknown) => void;
-}) {
-  return (
-    <>
-      <Field label="是否发生">
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setField("occurred", true)}
-            className={`rounded-md px-4 py-2 text-sm ${
-              form.occurred ? "bg-ink text-paper" : "border border-line text-ink/60"
-            }`}
-          >
-            是
-          </button>
-          <button
-            type="button"
-            onClick={() => setField("occurred", false)}
-            className={`rounded-md px-4 py-2 text-sm ${
-              form.occurred === false ? "bg-ink text-paper" : "border border-line text-ink/60"
-            }`}
-          >
-            否
-          </button>
-        </div>
-      </Field>
-      <Field label="时间">
-        <Input
-          type="datetime-local"
-          value={form.time as string}
-          onChange={(v) => setField("time", v)}
-        />
-      </Field>
-      <ScoreInput
-        label="满意程度 (0–10)"
-        value={form.satisfaction as number | null}
-        onChange={(v) => setField("satisfaction", v)}
       />
     </>
   );
