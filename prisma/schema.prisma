@@ -1,0 +1,370 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── 用户 ────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  dailyRecords          DailyRecord[]
+  sleepRecords          SleepRecord[]
+  coffeeRecords         CoffeeRecord[]
+  socialRecords         SocialRecord[]
+  physiologyRecords     PhysiologyRecord[]
+  sexRecords            SexRecord[]
+  dreamRecords          DreamRecord[]
+  workRecords           WorkRecord[]
+  locationRecords       LocationRecord[]
+  weatherRecords        WeatherRecord[]
+  contentRecords        ContentRecord[]
+  eventRecords          EventRecord[]
+  preferences           Preference[]
+  experiments           Experiment[]
+  screenTimeRecords     ScreenTimeRecord[]
+  aiConversations       AiConversation[]
+
+  @@map("users")
+}
+
+// ─── 每日状态 ────────────────────────────────────────
+
+model DailyRecord {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  date      DateTime @map("date")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 核心评分
+  energy        Int?   @map("energy") // 精力 0-10
+  focus         Int?   @map("focus") // 专注力 0-10
+  bodyFatigue   Int?   @map("body_fatigue") // 身体疲劳 0-10
+  morningSpirit Int?   @map("morning_spirit") // 起床精神程度 0-10
+
+  // 自由文本
+  mood       String? @map("mood") // 情绪
+  highPoint  String? @map("high_point") // 今天什么让我感觉特别好
+  lowPoint   String? @map("low_point") // 今天什么让我感觉特别消耗
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@map("daily_records")
+}
+
+// ─── 睡眠 ────────────────────────────────────────────
+
+model SleepRecord {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  date      DateTime @map("date") // 入睡日期（用于关联）
+  sleepStart DateTime @map("sleep_start") // 入睡时间
+  sleepEnd   DateTime @map("sleep_end") // 起床时间
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 睡眠时长由系统自动计算（分钟），存储为冗余字段方便查询
+  durationMinutes Int? @map("duration_minutes")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, date])
+  @@map("sleep_records")
+}
+
+// ─── 咖啡 ────────────────────────────────────────────
+
+model CoffeeRecord {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  time      DateTime @map("time")
+  amountMl  Int      @map("amount_ml") // 咖啡摄入量 ml
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, time])
+  @@map("coffee_records")
+}
+
+// ─── 社交 ────────────────────────────────────────────
+
+model SocialRecord {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String   @map("type") // 社交类型，如 "朋友1对1"、"聚会"、"同事"
+  description String? @map("description")
+  startTime DateTime @map("start_time")
+  endTime   DateTime @map("end_time")
+  feeling   String?  @map("feeling") // 自由文本感受
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, startTime])
+  @@map("social_records")
+}
+
+// ─── 经期 ────────────────────────────────────────────
+
+model PhysiologyRecord {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  isPeriod  Boolean  @map("is_period") // 是否来月经
+  startDate DateTime? @map("start_date") // 经期开始日期
+  endDate   DateTime? @map("end_date") // 经期结束日期
+  dayStatus String?  @map("day_status") // 经期当天状态
+  moodState String?  @map("mood_state") // 经期情绪状态
+  painLevel Int?     @map("pain_level") // 疼痛程度 0-10
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("physiology_records")
+}
+
+// ─── 性生活 ──────────────────────────────────────────
+
+model SexRecord {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  occurred    Boolean  @map("occurred") // 是否发生
+  time        DateTime @map("time") // 发生时间
+  satisfaction Int?    @map("satisfaction") // 满意程度 0-10
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("sex_records")
+}
+
+// ─── 做梦 ────────────────────────────────────────────
+
+model DreamRecord {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  date      DateTime @map("date")
+  hadDream  Boolean  @map("had_dream") // 是否做梦
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@map("dream_records")
+}
+
+// ─── 工作 / 学习 ─────────────────────────────────────
+
+model WorkRecord {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String   @map("type") // "work" | "study"
+  startTime DateTime @map("start_time")
+  endTime   DateTime @map("end_time")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 时长由系统自动计算（分钟）
+  durationMinutes Int? @map("duration_minutes")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, startTime])
+  @@map("work_records")
+}
+
+// ─── 地点 ────────────────────────────────────────────
+
+model LocationRecord {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String   @map("name") // 地点名称，如 "家"、"公司"、"咖啡馆"
+  time      DateTime @map("time")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("location_records")
+}
+
+// ─── 天气 ────────────────────────────────────────────
+
+model WeatherRecord {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  date        DateTime @map("date")
+  temperature Float?   @map("temperature") // 温度
+  condition   String?  @map("condition") // 天气状况，如 "晴"、"雨"、"多云"
+  humidity    Float?   @map("humidity") // 湿度
+  rainfall    Float?   @map("rainfall") // 降水
+  isManual    Boolean  @default(false) @map("is_manual") // 是否手动输入（第一版允许手动）
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@map("weather_records")
+}
+
+// ─── 内容消费 ────────────────────────────────────────
+
+model ContentRecord {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String   @map("type") // "song" | "movie"
+  title     String   @map("title") // 歌曲名称 或 电影名称
+  time      DateTime @map("time")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("content_records")
+}
+
+// ─── 重要事件 ────────────────────────────────────────
+
+model EventRecord {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  time      DateTime @map("time")
+  content   String   @map("content") // 自由文本
+  isImportant Boolean @default(false) @map("is_important")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("event_records")
+}
+
+// ─── 喜好数据库 ──────────────────────────────────────
+
+model Preference {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  category  String   @map("category") // "director" | "song" | "movie" | "book"
+  name      String   @map("name")
+  note      String?  @map("note")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, category])
+  @@map("preferences")
+}
+
+// ─── 个人实验 ────────────────────────────────────────
+
+model Experiment {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  question      String   @map("question") // 研究问题
+  variables     String   @map("variables") // 研究变量，JSON 数组字符串
+  metrics       String   @map("metrics") // 核心指标，JSON 数组字符串
+  period        String   @map("period") // 观察周期，如 "30天"、"90天"
+  startDate     DateTime @map("start_date")
+  endDate       DateTime? @map("end_date")
+  status        String   @default("active") @map("status") // "active" | "completed" | "cancelled"
+  conclusion    String?  @map("conclusion") // AI 生成的实验结论
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user         User                   @relation(fields: [userId], references: [id])
+  observations ExperimentObservation[]
+
+  @@index([userId])
+  @@map("experiments")
+}
+
+model ExperimentObservation {
+  id           String   @id @default(uuid())
+  experimentId String   @map("experiment_id")
+  date         DateTime @map("date")
+  note         String?  @map("note") // 观察笔记
+  data         String?  @map("data") // 结构化数据 JSON
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  experiment Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+
+  @@index([experimentId])
+  @@map("experiment_observations")
+}
+
+// ─── 手机屏幕时间（预留） ────────────────────────────
+
+model ScreenTimeRecord {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  date         DateTime @map("date")
+  totalMinutes Int?     @map("total_minutes") // 总屏幕时间（分钟）
+  source       String?  @map("source") // 数据来源，如 "manual" | "ios_screentime"
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@map("screen_time_records")
+}
+
+// ─── AI 对话 ─────────────────────────────────────────
+
+model AiConversation {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  title     String?  @map("title")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user     User        @relation(fields: [userId], references: [id])
+  messages AiMessage[]
+
+  @@index([userId])
+  @@map("ai_conversations")
+}
+
+model AiMessage {
+  id             String   @id @default(uuid())
+  conversationId String   @map("conversation_id")
+  role           String   @map("role") // "user" | "assistant" | "tool"
+  content        String   @map("content")
+  toolCalls      String?  @map("tool_calls") // JSON，工具调用记录
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("ai_messages")
+}
