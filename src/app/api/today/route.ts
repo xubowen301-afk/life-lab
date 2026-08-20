@@ -10,7 +10,7 @@ export async function GET() {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const [sleep, coffees, socials, works, locations, contents, events, dailyRecord] =
+  const [sleep, coffees, socials, works, locations, contents, events, dailyRecord, dreams, weathers] =
     await Promise.all([
       prisma.sleepRecord.findFirst({
         where: { userId: TEMP_USER_ID, date: { gte: today, lt: tomorrow } }
@@ -40,6 +40,12 @@ export async function GET() {
         orderBy: { time: "asc" }
       }),
       prisma.dailyRecord.findFirst({
+        where: { userId: TEMP_USER_ID, date: { gte: today, lt: tomorrow } }
+      }),
+      prisma.dreamRecord.findFirst({
+        where: { userId: TEMP_USER_ID, date: { gte: today, lt: tomorrow } }
+      }),
+      prisma.weatherRecord.findFirst({
         where: { userId: TEMP_USER_ID, date: { gte: today, lt: tomorrow } }
       })
     ]);
@@ -124,6 +130,28 @@ export async function GET() {
       icon: e.isImportant ? "⚡" : "📌",
       label: e.content,
       important: e.isImportant
+    });
+  }
+
+  if (dreams) {
+    timeline.push({
+      time: dreams.date.toISOString(),
+      type: "dream",
+      icon: dreams.hadDream ? "💭" : "😶",
+      label: dreams.hadDream ? "做梦了" : "没做梦"
+    });
+  }
+
+  if (weathers) {
+    const parts: string[] = [];
+    if (weathers.temperature !== null) parts.push(`${weathers.temperature}°C`);
+    if (weathers.condition) parts.push(weathers.condition);
+    timeline.push({
+      time: weathers.date.toISOString(),
+      type: "weather",
+      icon: "🌤",
+      label: "天气",
+      detail: parts.join(" · ")
     });
   }
 

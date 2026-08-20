@@ -69,6 +69,28 @@ export default function RecordPage() {
     setSubmitting(true);
     setMessage(null);
 
+    // 基本表单验证
+    const validations: Record<string, () => string | null> = {
+      daily: () => !form.date ? "请选择日期" : null,
+      sleep: () => !form.sleepStart || !form.sleepEnd ? "请填写入睡和起床时间" : new Date(form.sleepEnd as string) <= new Date(form.sleepStart as string) ? "起床时间必须晚于入睡时间" : null,
+      coffee: () => !form.time ? "请选择时间" : (form.amountMl as number) <= 0 ? "摄入量必须大于0" : null,
+      social: () => !form.socialType ? "请填写社交类型" : !form.startTime || !form.endTime ? "请填写开始和结束时间" : null,
+      work: () => !form.startTime || !form.endTime ? "请填写开始和结束时间" : new Date(form.endTime as string) <= new Date(form.startTime as string) ? "结束时间必须晚于开始时间" : null,
+      location: () => !form.name ? "请填写地点名称" : null,
+      content: () => !form.title ? "请填写名称" : null,
+      event: () => !form.content ? "请填写内容" : null
+    };
+
+    const validate = validations[activeType];
+    if (validate) {
+      const error = validate();
+      if (error) {
+        setMessage({ type: "error", text: error });
+        setSubmitting(false);
+        return;
+      }
+    }
+
     try {
       const res = await fetch("/api/records", {
         method: "POST",

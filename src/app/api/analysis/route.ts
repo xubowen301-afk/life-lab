@@ -26,23 +26,6 @@ function avg(arr: number[]): number {
   return arr.reduce((a, b) => a + b, 0) / arr.length;
 }
 
-// 计算分布
-function distribution(arr: number[], bins: number) {
-  const min = Math.min(...arr);
-  const max = Math.max(...arr);
-  const step = (max - min) / bins || 1;
-  const result: { range: string; count: number }[] = [];
-  for (let i = 0; i < bins; i++) {
-    const lo = min + i * step;
-    const hi = lo + step;
-    result.push({
-      range: `${lo.toFixed(1)}–${hi.toFixed(1)}`,
-      count: arr.filter((v) => v >= lo && (i === bins - 1 ? v <= hi : v < hi)).length
-    });
-  }
-  return result;
-}
-
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const preset = searchParams.get("preset");
@@ -212,7 +195,7 @@ async function handlePreset(preset: string, since: Date, days: number) {
           type: "bar",
           xLabel: "社交类型",
           yLabel: "次数",
-          data: types
+          data: types.map((t) => ({ x: t.name, y: t.count }))
         },
         reliability: `样本量：${socials.length}次社交记录。社交感受为自由文本，暂未做情感分析。`
       });
@@ -304,7 +287,7 @@ async function handlePreset(preset: string, since: Date, days: number) {
           type: "bar",
           xLabel: "天气状况",
           yLabel: "平均精力",
-          data: summary
+          data: summary.map((s) => ({ x: s.condition, y: s.avgEnergy }))
         },
         reliability: `样本量较小，各天气类型天数不均衡。`
       });
@@ -336,7 +319,7 @@ async function handlePreset(preset: string, since: Date, days: number) {
           type: "line",
           xLabel: "日期",
           yLabel: "睡眠时长（小时）",
-          data: trend
+          data: trend.map((t) => ({ x: t.date, y: t.hours }))
         },
         reliability: `样本量：${trend.length}天。`
       });
@@ -347,7 +330,7 @@ async function handlePreset(preset: string, since: Date, days: number) {
   }
 }
 
-async function handleFreeAnalysis(varA: string, varB: string, since: Date, days: number) {
+async function handleFreeAnalysis(varA: string, varB: string, since: Date, _days: number) {
   // 自由分析：提取两个变量的数据，计算相关性
   // 支持的变量：sleep_hours, coffee_ml, coffee_time, energy, focus, fatigue, morning_spirit, work_minutes, social_count
 

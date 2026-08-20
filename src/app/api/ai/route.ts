@@ -347,12 +347,20 @@ export async function POST(req: NextRequest) {
 - 使用中文回答，语气温暖、理性、简洁
 - 不要给出医疗建议`
       },
-      ...history
-        .filter((m) => m.role === "user" || m.role === "assistant")
-        .map((m) => ({
-          role: m.role as "user" | "assistant",
+      ...history.map((m) => {
+        if (m.role === "user") {
+          return { role: "user" as const, content: m.content };
+        }
+        if (m.role === "assistant") {
+          return { role: "assistant" as const, content: m.content || "" };
+        }
+        // tool message
+        return {
+          role: "tool" as const,
+          tool_call_id: m.toolCalls || "",
           content: m.content
-        }))
+        };
+      })
     ];
 
     // 如果没有 API Key，返回 mock 响应
@@ -364,18 +372,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ conversationId: convId, reply: mockReply, mock: true });
     }
 
-    // 调用 OpenAI（带工具调用循环）
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages,
-      tools: TOOLS,
-      tool_choice: "auto"
-    });
+    // 调用 OpenAI（带工具调用循环，最多 3 轮）
+    let currentMessages = messages;
+    let finalReply = "";
+    const maxRounds = 3;
 
-    const assistantMessage = response.choices[0].message;
+    for (let round = 0; round < maxRounds; round++) {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: currentMessages,
+        tools: TOOLS,
+        tool_choice: "auto"
+      });
 
-    // 处理工具调用
-    if (assistantMessage.tool_calls) {
+      const assistantMessage = response.choices[0].message;
+
+      // 无工具调用，保存并返回
+      if (!assistantMessage.tool_calls) {
+        finalReply = assistantMessage.content || "无法生成回复";
+        await prisma.aiMessage.create({
+          data: { conversationId: convId, role: "assistant", content: finalReply }
+        });
+        return NextResponse.json({ conversationId: convId, reply: finalReply });
+      }
+
       // 保存 AI 的工具调用
       await prisma.aiMessage.create({
         data: {
@@ -386,7 +406,7 @@ export async function POST(req: NextRequest) {
         }
       });
 
-      // 执行工具
+      // 执行工具并收集结果
       const toolResults: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
       for (const tc of assistantMessage.tool_calls) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -395,7 +415,6 @@ export async function POST(req: NextRequest) {
         const result = await executeTool(fn.name, args);
         const resultStr = JSON.stringify(result);
 
-        // 保存工具结果
         await prisma.aiMessage.create({
           data: {
             conversationId: convId,
@@ -412,42 +431,26 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // 第二轮调用：让 AI 基于工具结果生成最终回复
-      const finalMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-        ...messages,
+      // 准备下一轮消息
+      currentMessages = [
+        ...currentMessages,
         assistantMessage,
         ...toolResults
       ];
-
-      const finalResponse = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: finalMessages
-      });
-
-      const finalReply = finalResponse.choices[0].message.content || "无法生成回复";
-
-      await prisma.aiMessage.create({
-        data: {
-          conversationId: convId,
-          role: "assistant",
-          content: finalReply
-        }
-      });
-
-      return NextResponse.json({ conversationId: convId, reply: finalReply });
     }
 
-    // 无工具调用，直接保存并返回
-    const reply = assistantMessage.content || "无法生成回复";
-    await prisma.aiMessage.create({
-      data: {
-        conversationId: convId,
-        role: "assistant",
-        content: reply
-      }
+    // 最后一轮获取最终回复
+    const finalResponse = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: currentMessages
     });
 
-    return NextResponse.json({ conversationId: convId, reply });
+    finalReply = finalResponse.choices[0].message.content || "无法生成回复";
+    await prisma.aiMessage.create({
+      data: { conversationId: convId, role: "assistant", content: finalReply }
+    });
+
+    return NextResponse.json({ conversationId: convId, reply: finalReply });
   } catch (error) {
     console.error("AI 对话错误:", error);
     return NextResponse.json({ error: "AI 服务暂时不可用" }, { status: 500 });

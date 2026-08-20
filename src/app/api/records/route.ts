@@ -210,3 +210,32 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "创建记录失败" }, { status: 500 });
   }
 }
+
+// 删除记录
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const type = searchParams.get("type");
+    const id = searchParams.get("id");
+    if (!type || !id) return NextResponse.json({ error: "缺少参数" }, { status: 400 });
+
+    switch (type) {
+      case "daily": await prisma.dailyRecord.delete({ where: { id } }); break;
+      case "sleep": await prisma.sleepRecord.delete({ where: { id } }); break;
+      case "coffee": await prisma.coffeeRecord.delete({ where: { id } }); break;
+      case "social": await prisma.socialRecord.delete({ where: { id } }); break;
+      case "physiology": await prisma.physiologyRecord.delete({ where: { id } }); break;
+      case "dream": await prisma.dreamRecord.delete({ where: { id } }); break;
+      case "work": await prisma.workRecord.delete({ where: { id } }); break;
+      case "location": await prisma.locationRecord.delete({ where: { id } }); break;
+      case "weather": await prisma.weatherRecord.delete({ where: { id } }); break;
+      case "content": await prisma.contentRecord.delete({ where: { id } }); break;
+      case "event": await prisma.eventRecord.delete({ where: { id } }); break;
+      default: return NextResponse.json({ error: "未知记录类型" }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("删除记录失败:", error);
+    return NextResponse.json({ error: "删除记录失败" }, { status: 500 });
+  }
+}
