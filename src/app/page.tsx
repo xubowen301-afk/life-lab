@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import Timeline from "@/components/Timeline";
 import TodayStatus from "@/components/TodayStatus";
@@ -26,29 +26,94 @@ type TodayData = {
   } | null;
 };
 
-export default function TodayPage() {
-  const [data, setData] = useState<TodayData | null>(null);
-  const [loading, setLoading] = useState(true);
+function formatDateStr(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
 
-  useEffect(() => {
-    fetch("/api/today")
-      .then((r) => r.json())
-      .then(setData)
-      .finally(() => setLoading(false));
-  }, []);
-
-  const todayStr = new Date().toLocaleDateString("zh-CN", {
+function formatDisplayDate(date: Date) {
+  return date.toLocaleDateString("zh-CN", {
     year: "numeric",
     month: "long",
     day: "numeric",
     weekday: "long"
   });
+}
+
+function isToday(date: Date) {
+  return formatDateStr(date) === formatDateStr(new Date());
+}
+
+export default function TodayPage() {
+  const [viewDate, setViewDate] = useState(() => new Date());
+  const [data, setData] = useState<TodayData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchDate = useCallback((date: Date) => {
+    setLoading(true);
+    fetch(`/api/today?date=${formatDateStr(date)}`)
+      .then((r) => r.json())
+      .then(setData)
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    fetchDate(viewDate);
+  }, [viewDate, fetchDate]);
+
+  function goToPrevDay() {
+    const d = new Date(viewDate);
+    d.setDate(d.getDate() - 1);
+    setViewDate(d);
+  }
+
+  function goToNextDay() {
+    const d = new Date(viewDate);
+    d.setDate(d.getDate() + 1);
+    // 不能超过今天
+    if (d <= new Date()) {
+      setViewDate(d);
+    }
+  }
+
+  function goToToday() {
+    setViewDate(new Date());
+  }
+
+  const canGoNext = !isToday(viewDate);
 
   return (
     <div className="flex-1 py-8">
-      {/* 日期 */}
-      <p className="text-sm text-sage mb-1">{todayStr}</p>
-      <h2 className="text-3xl font-semibold tracking-normal mb-8">今天发生了什么？</h2>
+      {/* 日期导航 */}
+      <div className="flex items-center gap-3 mb-1">
+        <button
+          onClick={goToPrevDay}
+          className="rounded p-1 text-ink/40 hover:text-ink hover:bg-white/60 transition-colors"
+          title="前一天"
+        >
+          ←
+        </button>
+        <p className="text-sm text-sage">{formatDisplayDate(viewDate)}</p>
+        {canGoNext && (
+          <button
+            onClick={goToNextDay}
+            className="rounded p-1 text-ink/40 hover:text-ink hover:bg-white/60 transition-colors"
+            title="后一天"
+          >
+            →
+          </button>
+        )}
+        {!isToday(viewDate) && (
+          <button
+            onClick={goToToday}
+            className="text-xs text-sage underline underline-offset-2 ml-2"
+          >
+            回到今天
+          </button>
+        )}
+      </div>
+      <h2 className="text-3xl font-semibold tracking-normal mb-8">
+        {isToday(viewDate) ? "今天发生了什么？" : `${viewDate.getMonth() + 1}月${viewDate.getDate()}日`}
+      </h2>
 
       {/* 时间线 */}
       <section className="mb-10">
@@ -61,10 +126,10 @@ export default function TodayPage() {
         )}
       </section>
 
-      {/* 今日状态 */}
+      {/* 当日状态 */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-medium text-ink/60 uppercase tracking-wide">今日状态</h3>
+          <h3 className="text-sm font-medium text-ink/60 uppercase tracking-wide">当日状态</h3>
         </div>
         <div className="rounded-lg border border-line bg-white/40 p-4">
           {loading ? (

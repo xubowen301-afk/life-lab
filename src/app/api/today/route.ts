@@ -1,11 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 // 临时用户 ID — Phase 1 MVP，未来替换为真实认证
 const TEMP_USER_ID = "default-user";
 
-export async function GET() {
-  const today = new Date();
+export async function GET(req: NextRequest) {
+  const dateParam = req.nextUrl.searchParams.get("date");
+  const today = dateParam ? new Date(dateParam) : new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
