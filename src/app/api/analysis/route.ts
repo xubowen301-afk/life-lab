@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-const TEMP_USER_ID = "default-user";
+import { getUserId } from "@/lib/auth";
 
 // 计算 Pearson 相关系数
 function pearsonCorrelation(xs: number[], ys: number[]): number | null {
@@ -27,6 +26,9 @@ function avg(arr: number[]): number {
 }
 
 export async function GET(req: NextRequest) {
+  const userId = await getUserId();
+  if (!userId) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
   const { searchParams } = new URL(req.url);
   const preset = searchParams.get("preset");
   const varA = searchParams.get("varA");
@@ -40,12 +42,12 @@ export async function GET(req: NextRequest) {
   try {
     // ─── 预设分析 ──────────────────────────────────
     if (preset) {
-      return handlePreset(preset, since, days);
+      return handlePreset(userId, preset, since, days);
     }
 
     // ─── 自由分析 ──────────────────────────────────
     if (varA && varB) {
-      return handleFreeAnalysis(varA, varB, since, days);
+      return handleFreeAnalysis(userId, varA, varB, since, days);
     }
 
     return NextResponse.json({ error: "缺少参数" }, { status: 400 });
@@ -55,16 +57,16 @@ export async function GET(req: NextRequest) {
   }
 }
 
-async function handlePreset(preset: string, since: Date, days: number) {
+async function handlePreset(userId: string, preset: string, since: Date, days: number) {
   switch (preset) {
     case "sleep_mood": {
       const sleeps = await prisma.sleepRecord.findMany({
-        where: { userId: TEMP_USER_ID, date: { gte: since } },
+        where: { userId: userId, date: { gte: since } },
         orderBy: { date: "asc" }
       });
       const dailyMap = new Map<string, number>();
       const dailies = await prisma.dailyRecord.findMany({
-        where: { userId: TEMP_USER_ID, date: { gte: since } }
+        where: { userId: userId, date: { gte: since } }
       });
       for (const d of dailies) {
         if (d.energy !== null) {
@@ -111,11 +113,11 @@ async function handlePreset(preset: string, since: Date, days: number) {
 
     case "coffee_sleep": {
       const coffees = await prisma.coffeeRecord.findMany({
-        where: { userId: TEMP_USER_ID, time: { gte: since } },
+        where: { userId: userId, time: { gte: since } },
         orderBy: { time: "asc" }
       });
       const sleeps = await prisma.sleepRecord.findMany({
-        where: { userId: TEMP_USER_ID, date: { gte: since } },
+        where: { userId: userId, date: { gte: since } },
         orderBy: { date: "asc" }
       });
 
@@ -174,7 +176,7 @@ async function handlePreset(preset: string, since: Date, days: number) {
 
     case "social_feeling": {
       const socials = await prisma.socialRecord.findMany({
-        where: { userId: TEMP_USER_ID, startTime: { gte: since } },
+        where: { userId: userId, startTime: { gte: since } },
         orderBy: { startTime: "asc" }
       });
 
@@ -203,11 +205,11 @@ async function handlePreset(preset: string, since: Date, days: number) {
 
     case "focus_work": {
       const works = await prisma.workRecord.findMany({
-        where: { userId: TEMP_USER_ID, startTime: { gte: since } },
+        where: { userId: userId, startTime: { gte: since } },
         orderBy: { startTime: "asc" }
       });
       const dailies = await prisma.dailyRecord.findMany({
-        where: { userId: TEMP_USER_ID, date: { gte: since } }
+        where: { userId: userId, date: { gte: since } }
       });
       const focusMap = new Map<string, number>();
       for (const d of dailies) {
@@ -250,10 +252,10 @@ async function handlePreset(preset: string, since: Date, days: number) {
 
     case "weather_mood": {
       const weathers = await prisma.weatherRecord.findMany({
-        where: { userId: TEMP_USER_ID, date: { gte: since } }
+        where: { userId: userId, date: { gte: since } }
       });
       const dailies = await prisma.dailyRecord.findMany({
-        where: { userId: TEMP_USER_ID, date: { gte: since } }
+        where: { userId: userId, date: { gte: since } }
       });
       const energyMap = new Map<string, number>();
       for (const d of dailies) {
@@ -295,7 +297,7 @@ async function handlePreset(preset: string, since: Date, days: number) {
 
     case "sleep_history": {
       const sleeps = await prisma.sleepRecord.findMany({
-        where: { userId: TEMP_USER_ID, date: { gte: since } },
+        where: { userId: userId, date: { gte: since } },
         orderBy: { date: "desc" }
       });
 
@@ -320,7 +322,7 @@ async function handlePreset(preset: string, since: Date, days: number) {
 
     case "sleep_trend": {
       const sleeps = await prisma.sleepRecord.findMany({
-        where: { userId: TEMP_USER_ID, date: { gte: since } },
+        where: { userId: userId, date: { gte: since } },
         orderBy: { date: "asc" }
       });
 
@@ -352,7 +354,7 @@ async function handlePreset(preset: string, since: Date, days: number) {
 
     case "daily_trend": {
       const dailies = await prisma.dailyRecord.findMany({
-        where: { userId: TEMP_USER_ID, date: { gte: since } },
+        where: { userId: userId, date: { gte: since } },
         orderBy: { date: "asc" }
       });
 
@@ -379,7 +381,7 @@ async function handlePreset(preset: string, since: Date, days: number) {
   }
 }
 
-async function handleFreeAnalysis(varA: string, varB: string, since: Date, _days: number) {
+async function handleFreeAnalysis(userId: string, varA: string, varB: string, since: Date, _days: number) {
   // 自由分析：提取两个变量的数据，计算相关性
   // 支持的变量：sleep_hours, coffee_ml, coffee_time, energy, focus, fatigue, morning_spirit, work_minutes, social_count
 
@@ -387,7 +389,7 @@ async function handleFreeAnalysis(varA: string, varB: string, since: Date, _days
 
   // 获取每日数据
   const dailies = await prisma.dailyRecord.findMany({
-    where: { userId: TEMP_USER_ID, date: { gte: since } }
+    where: { userId: userId, date: { gte: since } }
   });
   for (const d of dailies) {
     const key = d.date.toISOString().slice(0, 10);
@@ -401,7 +403,7 @@ async function handleFreeAnalysis(varA: string, varB: string, since: Date, _days
 
   // 睡眠
   const sleeps = await prisma.sleepRecord.findMany({
-    where: { userId: TEMP_USER_ID, date: { gte: since } }
+    where: { userId: userId, date: { gte: since } }
   });
   for (const s of sleeps) {
     const key = s.date.toISOString().slice(0, 10);
@@ -413,7 +415,7 @@ async function handleFreeAnalysis(varA: string, varB: string, since: Date, _days
 
   // 咖啡
   const coffees = await prisma.coffeeRecord.findMany({
-    where: { userId: TEMP_USER_ID, time: { gte: since } }
+    where: { userId: userId, time: { gte: since } }
   });
   for (const c of coffees) {
     const key = c.time.toISOString().slice(0, 10);
@@ -427,7 +429,7 @@ async function handleFreeAnalysis(varA: string, varB: string, since: Date, _days
 
   // 工作
   const works = await prisma.workRecord.findMany({
-    where: { userId: TEMP_USER_ID, startTime: { gte: since } }
+    where: { userId: userId, startTime: { gte: since } }
   });
   for (const w of works) {
     const key = w.startTime.toISOString().slice(0, 10);
@@ -438,7 +440,7 @@ async function handleFreeAnalysis(varA: string, varB: string, since: Date, _days
 
   // 社交
   const socials = await prisma.socialRecord.findMany({
-    where: { userId: TEMP_USER_ID, startTime: { gte: since } }
+    where: { userId: userId, startTime: { gte: since } }
   });
   for (const s of socials) {
     const key = s.startTime.toISOString().slice(0, 10);

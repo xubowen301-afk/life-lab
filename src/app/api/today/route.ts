@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-// 临时用户 ID — Phase 1 MVP，未来替换为真实认证
-const TEMP_USER_ID = "default-user";
+import { getUserId } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
+  const userId = await getUserId();
+  if (!userId) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
   const dateParam = req.nextUrl.searchParams.get("date");
   const today = dateParam ? new Date(dateParam) : new Date();
   today.setHours(0, 0, 0, 0);
@@ -14,40 +15,40 @@ export async function GET(req: NextRequest) {
   const [sleep, coffees, socials, works, locations, contents, events, dailyRecord, dreams, weathers] =
     await Promise.all([
       prisma.sleepRecord.findFirst({
-        where: { userId: TEMP_USER_ID, date: { gte: today, lt: tomorrow } }
+        where: { userId, date: { gte: today, lt: tomorrow } }
       }),
       prisma.coffeeRecord.findMany({
-        where: { userId: TEMP_USER_ID, time: { gte: today, lt: tomorrow } },
+        where: { userId: userId, time: { gte: today, lt: tomorrow } },
         orderBy: { time: "asc" }
       }),
       prisma.socialRecord.findMany({
-        where: { userId: TEMP_USER_ID, startTime: { gte: today, lt: tomorrow } },
+        where: { userId: userId, startTime: { gte: today, lt: tomorrow } },
         orderBy: { startTime: "asc" }
       }),
       prisma.workRecord.findMany({
-        where: { userId: TEMP_USER_ID, startTime: { gte: today, lt: tomorrow } },
+        where: { userId: userId, startTime: { gte: today, lt: tomorrow } },
         orderBy: { startTime: "asc" }
       }),
       prisma.locationRecord.findMany({
-        where: { userId: TEMP_USER_ID, time: { gte: today, lt: tomorrow } },
+        where: { userId: userId, time: { gte: today, lt: tomorrow } },
         orderBy: { time: "asc" }
       }),
       prisma.contentRecord.findMany({
-        where: { userId: TEMP_USER_ID, time: { gte: today, lt: tomorrow } },
+        where: { userId: userId, time: { gte: today, lt: tomorrow } },
         orderBy: { time: "asc" }
       }),
       prisma.eventRecord.findMany({
-        where: { userId: TEMP_USER_ID, time: { gte: today, lt: tomorrow } },
+        where: { userId: userId, time: { gte: today, lt: tomorrow } },
         orderBy: { time: "asc" }
       }),
       prisma.dailyRecord.findFirst({
-        where: { userId: TEMP_USER_ID, date: { gte: today, lt: tomorrow } }
+        where: { userId: userId, date: { gte: today, lt: tomorrow } }
       }),
       prisma.dreamRecord.findFirst({
-        where: { userId: TEMP_USER_ID, date: { gte: today, lt: tomorrow } }
+        where: { userId: userId, date: { gte: today, lt: tomorrow } }
       }),
       prisma.weatherRecord.findFirst({
-        where: { userId: TEMP_USER_ID, date: { gte: today, lt: tomorrow } }
+        where: { userId: userId, date: { gte: today, lt: tomorrow } }
       })
     ]);
 

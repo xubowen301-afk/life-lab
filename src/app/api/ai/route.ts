@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getUserId } from "@/lib/auth";
 import OpenAI from "openai";
-
-const TEMP_USER_ID = "default-user";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "sk-placeholder"
@@ -145,7 +144,7 @@ const TOOLS = [
 
 // ─── 工具执行 ────────────────────────────────────────
 
-async function executeTool(name: string, args: Record<string, unknown>) {
+async function executeTool(userId: string, name: string, args: Record<string, unknown>) {
   const days = (args.days as number) || 30;
   const since = new Date();
   since.setDate(since.getDate() - days);
@@ -154,7 +153,7 @@ async function executeTool(name: string, args: Record<string, unknown>) {
   switch (name) {
     case "get_daily_records": {
       const records = await prisma.dailyRecord.findMany({
-        where: { userId: TEMP_USER_ID, date: { gte: since } },
+        where: { userId: userId, date: { gte: since } },
         orderBy: { date: "desc" }
       });
       return records.map((r) => ({
@@ -169,7 +168,7 @@ async function executeTool(name: string, args: Record<string, unknown>) {
 
     case "get_sleep_records": {
       const records = await prisma.sleepRecord.findMany({
-        where: { userId: TEMP_USER_ID, date: { gte: since } },
+        where: { userId: userId, date: { gte: since } },
         orderBy: { date: "desc" }
       });
       return records.map((r) => ({
@@ -183,7 +182,7 @@ async function executeTool(name: string, args: Record<string, unknown>) {
 
     case "get_coffee_records": {
       const records = await prisma.coffeeRecord.findMany({
-        where: { userId: TEMP_USER_ID, time: { gte: since } },
+        where: { userId: userId, time: { gte: since } },
         orderBy: { time: "desc" }
       });
       return records.map((r) => ({
@@ -194,7 +193,7 @@ async function executeTool(name: string, args: Record<string, unknown>) {
 
     case "get_social_records": {
       const records = await prisma.socialRecord.findMany({
-        where: { userId: TEMP_USER_ID, startTime: { gte: since } },
+        where: { userId: userId, startTime: { gte: since } },
         orderBy: { startTime: "desc" }
       });
       return records.map((r) => ({
@@ -208,7 +207,7 @@ async function executeTool(name: string, args: Record<string, unknown>) {
 
     case "get_work_records": {
       const records = await prisma.workRecord.findMany({
-        where: { userId: TEMP_USER_ID, startTime: { gte: since } },
+        where: { userId: userId, startTime: { gte: since } },
         orderBy: { startTime: "desc" }
       });
       return records.map((r) => ({
@@ -303,6 +302,9 @@ async function executeTool(name: string, args: Record<string, unknown>) {
 
 export async function POST(req: NextRequest) {
   try {
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
     const { message, conversationId } = await req.json();
     if (!message) return NextResponse.json({ error: "缺少消息" }, { status: 400 });
 
@@ -310,7 +312,7 @@ export async function POST(req: NextRequest) {
     let convId = conversationId;
     if (!convId) {
       const conv = await prisma.aiConversation.create({
-        data: { userId: TEMP_USER_ID }
+        data: { userId: userId }
       });
       convId = conv.id;
     }
@@ -412,7 +414,7 @@ export async function POST(req: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const fn = (tc as any).function;
         const args = JSON.parse(fn.arguments);
-        const result = await executeTool(fn.name, args);
+        const result = await executeTool(userId, fn.name, args);
         const resultStr = JSON.stringify(result);
 
         await prisma.aiMessage.create({
@@ -459,6 +461,9 @@ export async function POST(req: NextRequest) {
 
 // 获取对话列表
 export async function GET(req: NextRequest) {
+  const userId = await getUserId();
+  if (!userId) return NextResponse.json({ error: "请先登录" }, { status: 401 });
+
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
 
@@ -471,7 +476,7 @@ export async function GET(req: NextRequest) {
   }
 
   const conversations = await prisma.aiConversation.findMany({
-    where: { userId: TEMP_USER_ID },
+    where: { userId: userId },
     orderBy: { updatedAt: "desc" },
     take: 20
   });

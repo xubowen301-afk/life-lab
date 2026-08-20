@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-const TEMP_USER_ID = "default-user";
+import { getUserId } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ error: "请先登录" }, { status: 401 });
     const body = await req.json();
     const { type, ...data } = body;
 
@@ -13,12 +14,12 @@ export async function POST(req: NextRequest) {
         const record = await prisma.dailyRecord.upsert({
           where: {
             userId_date: {
-              userId: TEMP_USER_ID,
+              userId: userId,
               date: new Date(data.date)
             }
           },
           create: {
-            userId: TEMP_USER_ID,
+            userId: userId,
             date: new Date(data.date),
             mood: data.mood,
             energy: data.energy,
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
 
         const record = await prisma.sleepRecord.create({
           data: {
-            userId: TEMP_USER_ID,
+            userId: userId,
             date: new Date(data.date),
             sleepStart,
             sleepEnd,
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
       case "coffee": {
         const record = await prisma.coffeeRecord.create({
           data: {
-            userId: TEMP_USER_ID,
+            userId: userId,
             time: new Date(data.time),
             amountMl: data.amountMl
           }
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest) {
       case "social": {
         const record = await prisma.socialRecord.create({
           data: {
-            userId: TEMP_USER_ID,
+            userId: userId,
             type: data.socialType,
             description: data.description,
             startTime: new Date(data.startTime),
@@ -88,7 +89,7 @@ export async function POST(req: NextRequest) {
       case "physiology": {
         const record = await prisma.physiologyRecord.create({
           data: {
-            userId: TEMP_USER_ID,
+            userId: userId,
             isPeriod: data.isPeriod,
             startDate: data.startDate ? new Date(data.startDate) : null,
             endDate: data.endDate ? new Date(data.endDate) : null,
@@ -104,12 +105,12 @@ export async function POST(req: NextRequest) {
         const record = await prisma.dreamRecord.upsert({
           where: {
             userId_date: {
-              userId: TEMP_USER_ID,
+              userId: userId,
               date: new Date(data.date)
             }
           },
           create: {
-            userId: TEMP_USER_ID,
+            userId: userId,
             date: new Date(data.date),
             hadDream: data.hadDream
           },
@@ -129,7 +130,7 @@ export async function POST(req: NextRequest) {
 
         const record = await prisma.workRecord.create({
           data: {
-            userId: TEMP_USER_ID,
+            userId: userId,
             type: data.workType,
             startTime,
             endTime,
@@ -142,7 +143,7 @@ export async function POST(req: NextRequest) {
       case "location": {
         const record = await prisma.locationRecord.create({
           data: {
-            userId: TEMP_USER_ID,
+            userId: userId,
             name: data.name,
             time: new Date(data.time)
           }
@@ -154,12 +155,12 @@ export async function POST(req: NextRequest) {
         const record = await prisma.weatherRecord.upsert({
           where: {
             userId_date: {
-              userId: TEMP_USER_ID,
+              userId: userId,
               date: new Date(data.date)
             }
           },
           create: {
-            userId: TEMP_USER_ID,
+            userId: userId,
             date: new Date(data.date),
             temperature: data.temperature,
             condition: data.condition,
@@ -181,7 +182,7 @@ export async function POST(req: NextRequest) {
       case "content": {
         const record = await prisma.contentRecord.create({
           data: {
-            userId: TEMP_USER_ID,
+            userId: userId,
             type: data.contentType,
             title: data.title,
             time: new Date(data.time)
@@ -193,7 +194,7 @@ export async function POST(req: NextRequest) {
       case "event": {
         const record = await prisma.eventRecord.create({
           data: {
-            userId: TEMP_USER_ID,
+            userId: userId,
             time: new Date(data.time),
             content: data.content,
             isImportant: data.isImportant

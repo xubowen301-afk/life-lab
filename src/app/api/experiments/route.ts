@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-const TEMP_USER_ID = "default-user";
+import { getUserId } from "@/lib/auth";
 
 export async function GET() {
+  const userId = await getUserId();
+  if (!userId) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   const experiments = await prisma.experiment.findMany({
-    where: { userId: TEMP_USER_ID },
+    where: { userId: userId },
     orderBy: { createdAt: "desc" },
     include: { observations: { orderBy: { date: "desc" }, take: 5 } }
   });
@@ -13,10 +14,12 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const userId = await getUserId();
+  if (!userId) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   const body = await req.json();
   const experiment = await prisma.experiment.create({
     data: {
-      userId: TEMP_USER_ID,
+      userId: userId,
       question: body.question,
       variables: JSON.stringify(body.variables),
       metrics: JSON.stringify(body.metrics),
@@ -30,6 +33,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const userId = await getUserId();
+  if (!userId) return NextResponse.json({ error: "请先登录" }, { status: 401 });
   const body = await req.json();
   const experiment = await prisma.experiment.update({
     where: { id: body.id },
