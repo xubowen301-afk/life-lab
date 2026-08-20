@@ -112,6 +112,18 @@ export default function TodayPage() {
             回到今天
           </button>
         )}
+        <input
+          type="date"
+          value={formatDateStr(viewDate)}
+          onChange={(e) => {
+            if (e.target.value) {
+              const d = new Date(e.target.value);
+              if (d <= new Date()) setViewDate(d);
+            }
+          }}
+          className="ml-auto rounded-md border border-line bg-white/60 px-2 py-1 text-xs text-ink/60 focus:outline-none focus:ring-1 focus:ring-sage"
+          title="跳转到指定日期"
+        />
       </div>
       <h2 className="text-3xl font-semibold tracking-normal mb-8">
         {isToday(viewDate) ? "今天发生了什么？" : `${viewDate.getMonth() + 1}月${viewDate.getDate()}日`}
