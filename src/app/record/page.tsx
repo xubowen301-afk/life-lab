@@ -41,6 +41,8 @@ export default function RecordPage() {
   const [form, setForm] = useState<Record<string, unknown>>({
     date: todayLocal(),
     time: nowLocal(),
+    sleepStart: `${todayLocal()}T00:00`,
+    sleepEnd: `${todayLocal()}T08:00`,
     amountMl: 300,
     socialType: "",
     startTime: "",
