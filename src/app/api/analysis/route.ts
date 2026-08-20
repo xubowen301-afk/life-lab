@@ -325,6 +325,30 @@ async function handlePreset(preset: string, since: Date, days: number) {
       });
     }
 
+    case "daily_trend": {
+      const dailies = await prisma.dailyRecord.findMany({
+        where: { userId: TEMP_USER_ID, date: { gte: since } },
+        orderBy: { date: "asc" }
+      });
+
+      const trend = dailies.map((d) => ({
+        date: d.date.toISOString().slice(0, 10),
+        energy: d.energy,
+        focus: d.focus,
+        bodyFatigue: d.bodyFatigue,
+        morningSpirit: d.morningSpirit
+      }));
+
+      return NextResponse.json({
+        title: "每日状态趋势",
+        conclusion: trend.length > 0 ? `近${trend.length}天每日状态记录。` : "数据不足",
+        data: trend,
+        stats: { sampleSize: trend.length },
+        chart: { type: "line", data: [], xLabel: "", yLabel: "" },
+        reliability: `样本量：${trend.length}天。`
+      });
+    }
+
     default:
       return NextResponse.json({ error: "未知预设分析" }, { status: 400 });
   }

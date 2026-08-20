@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import Timeline from "@/components/Timeline";
 import TodayStatus from "@/components/TodayStatus";
+import DailyTrend from "@/components/DailyTrend";
 
 type TodayData = {
   date: string;
@@ -139,6 +140,14 @@ export default function TodayPage() {
           ) : (
             <TodayStatus data={data?.dailyRecord ?? null} />
           )}
+        </div>
+      </section>
+
+      {/* 30天趋势 */}
+      <section className="mb-10">
+        <h3 className="text-sm font-medium text-ink/60 uppercase tracking-wide mb-3">近 30 天趋势</h3>
+        <div className="rounded-lg border border-line bg-white/40 p-4">
+          <DailyTrend />
         </div>
       </section>
 
