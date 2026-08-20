@@ -293,6 +293,31 @@ async function handlePreset(preset: string, since: Date, days: number) {
       });
     }
 
+    case "sleep_history": {
+      const sleeps = await prisma.sleepRecord.findMany({
+        where: { userId: TEMP_USER_ID, date: { gte: since } },
+        orderBy: { date: "desc" }
+      });
+
+      const data = sleeps.map((s) => ({
+        date: s.date.toISOString().slice(0, 10),
+        sleepStart: s.sleepStart.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }),
+        sleepEnd: s.sleepEnd.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }),
+        duration: s.durationMinutes
+          ? `${Math.floor(s.durationMinutes / 60)}h${s.durationMinutes % 60}m`
+          : "-"
+      }));
+
+      return NextResponse.json({
+        title: "睡眠历史",
+        conclusion: "",
+        data,
+        stats: { sampleSize: data.length },
+        chart: { type: "line", data: [], xLabel: "", yLabel: "" },
+        reliability: ""
+      });
+    }
+
     case "sleep_trend": {
       const sleeps = await prisma.sleepRecord.findMany({
         where: { userId: TEMP_USER_ID, date: { gte: since } },
