@@ -92,10 +92,18 @@ export default function RecordPage() {
     }
 
     try {
+      // 转换 datetime-local 值为 ISO 字符串（修复时区问题）
+      const payload = { ...form };
+      for (const key of ["time", "sleepStart", "sleepEnd", "startTime", "endTime"]) {
+        if (payload[key] && typeof payload[key] === "string" && payload[key].includes("T")) {
+          payload[key] = new Date(payload[key] as string).toISOString();
+        }
+      }
+
       const res = await fetch("/api/records", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: activeType, ...form })
+        body: JSON.stringify({ type: activeType, ...payload })
       });
 
       if (res.ok) {
